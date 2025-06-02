@@ -112,11 +112,9 @@ def dashboard():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Clear any existing session
+    # Always clear any existing session
     session.clear()
-    
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+    logout_user()
     
     if request.method == 'POST':
         try:
@@ -134,8 +132,6 @@ def login():
                 return redirect(url_for('login'))
             
             if check_password_hash(user.password_hash, password):
-                # Clear any existing session
-                session.clear()
                 # Create new session
                 login_user(user)
                 # Set session expiry
