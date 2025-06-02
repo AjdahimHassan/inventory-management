@@ -1,180 +1,262 @@
 <!DOCTYPE html>
-<html lang="{{ session.get('language', 'en') }}">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if session.get('language') == 'fr' %}Tableau de Bord de Revente{% else %}Reselling Dashboard{% endif %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <title>{% block title %}Admin Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .sidebar {
+        :root {
+            --primary-color: #4a90e2;
+            --text-color: #333;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-border: #e9ecef;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --nav-bg: #ffffff;
+            --nav-text: #333;
+            --nav-hover: #f8f9fa;
+            --table-bg: #ffffff;
+            --table-border: #dee2e6;
+            --table-hover: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #64b5f6;
+            --text-color: #e0e0e0;
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --input-bg: #3d3d3d;
+            --input-border: #4d4d4d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --nav-bg: #2d2d2d;
+            --nav-text: #e0e0e0;
+            --nav-hover: #3d3d3d;
+            --table-bg: #2d2d2d;
+            --table-border: #4d4d4d;
+            --table-hover: #3d3d3d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .navbar {
+            background-color: var(--nav-bg);
+            border-bottom: 1px solid var(--input-border);
+        }
+
+        .navbar-brand, .nav-link {
+            color: var(--nav-text) !important;
+        }
+
+        .nav-link:hover {
+            background-color: var(--nav-hover);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-color: var(--input-border);
+        }
+
+        .table {
+            color: var(--text-color);
+            background-color: var(--table-bg);
+        }
+
+        .table td, .table th {
+            border-color: var(--table-border);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: var(--table-hover);
+        }
+
+        .form-control, .form-select {
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-color);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .modal-header, .modal-footer {
+            border-color: var(--input-border);
+        }
+
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        .theme-toggle {
             position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 100;
-            padding: 48px 0 0;
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-            background-color: #212529;
-            color: white;
-            width: 250px;
-            transition: all 0.3s;
+            top: 1rem;
+            right: 1rem;
+            background: var(--card-bg);
+            border: 2px solid var(--input-border);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
         }
-        
-        .sidebar.collapsed {
-            margin-left: -250px;
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
         }
-        
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, .8);
-            padding: 0.5rem 1rem;
-            margin: 0.2rem 0;
+
+        .theme-toggle i {
+            color: var(--text-color);
+            font-size: 1.2rem;
         }
-        
-        .sidebar .nav-link:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, .1);
+
+        .alert {
+            background-color: var(--card-bg);
+            border-color: var(--input-border);
+            color: var(--text-color);
         }
-        
-        .sidebar .nav-link.active {
-            color: white;
-            background-color: rgba(255, 255, 255, .2);
+
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            border-color: rgba(40, 167, 69, 0.2);
         }
-        
-        .sidebar .nav-link i {
-            margin-right: 0.5rem;
+
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.2);
         }
-        
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            transition: all 0.3s;
+
+        .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.2);
         }
-        
-        .main-content.expanded {
-            margin-left: 0;
-        }
-        
-        .toggle-btn {
-            position: fixed;
-            top: 10px;
-            left: 260px;
-            z-index: 101;
-            transition: all 0.3s;
-        }
-        
-        .toggle-btn.collapsed {
-            left: 10px;
-        }
-        
-        .language-switcher {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 102;
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                margin-left: -250px;
-            }
-            .sidebar.show {
-                margin-left: 0;
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .toggle-btn {
-                left: 10px;
-            }
-            .language-switcher {
-                bottom: 10px;
-                left: 10px;
-            }
+
+        .alert-info {
+            background-color: rgba(23, 162, 184, 0.1);
+            border-color: rgba(23, 162, 184, 0.2);
         }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <button class="btn btn-dark toggle-btn" id="sidebarToggle">
-        <i class="bi bi-list"></i>
-    </button>
-
-    <nav class="sidebar" id="sidebar">
-        <div class="position-sticky">
-            <div class="px-3 mb-4">
-                <h5>{% if session.get('language') == 'fr' %}Tableau de Bord de Revente{% else %}Reselling Dashboard{% endif %}</h5>
+    {% if current_user.is_authenticated %}
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-chart-line me-2"></i>Admin Dashboard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('listings') }}">
+                            <i class="fas fa-list me-1"></i>Listings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('inventory') }}">
+                            <i class="fas fa-box me-1"></i>Inventory
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('sales') }}">
+                            <i class="fas fa-shopping-cart me-1"></i>Sales
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('marketplaces') }}">
+                            <i class="fas fa-store me-1"></i>Marketplaces
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('reports') }}">
+                            <i class="fas fa-chart-bar me-1"></i>Reports
+                        </a>
+                    </li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('users') }}">
+                            <i class="fas fa-users me-1"></i>Users
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-link nav-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>{{ current_user.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('dashboard') }}">
-                        <i class="bi bi-speedometer2"></i> {% if session.get('language') == 'fr' %}Tableau de Bord{% else %}Dashboard{% endif %}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('listings') }}">
-                        <i class="bi bi-list-ul"></i> {% if session.get('language') == 'fr' %}Annonces{% else %}Listings{% endif %}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('inventory') }}">
-                        <i class="bi bi-box"></i> {% if session.get('language') == 'fr' %}Inventaire{% else %}Inventory{% endif %}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('sales') }}">
-                        <i class="bi bi-cart"></i> {% if session.get('language') == 'fr' %}Ventes{% else %}Sales{% endif %}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('marketplaces') }}">
-                        <i class="bi bi-shop"></i> {% if session.get('language') == 'fr' %}Marchés{% else %}Marketplaces{% endif %}
-                    </a>
-                </li>
-                {% if current_user.role == 'admin' %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('users') }}">
-                        <i class="bi bi-people"></i> {% if session.get('language') == 'fr' %}Utilisateurs{% else %}Users{% endif %}
-                    </a>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('logout') }}">
-                        <i class="bi bi-box-arrow-right"></i> {% if session.get('language') == 'fr' %}Déconnexion{% else %}Logout{% endif %}
-                    </a>
-                </li>
-            </ul>
         </div>
     </nav>
+    {% endif %}
 
-    <div class="language-switcher">
-        <div class="btn-group">
-            <a href="{{ url_for('change_language', language='en') }}" class="btn btn-sm btn-outline-light {% if session.get('language') == 'en' %}active{% endif %}">EN</a>
-            <a href="{{ url_for('change_language', language='fr') }}" class="btn btn-sm btn-outline-light {% if session.get('language') == 'fr' %}active{% endif %}">FR</a>
-        </div>
-    </div>
+    {% block content %}{% endblock %}
 
-    <main class="main-content" id="mainContent">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
-    </main>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('collapsed');
-            document.getElementById('mainContent').classList.toggle('expanded');
-            this.classList.toggle('collapsed');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add theme toggle button if not on login page
+            if (!document.querySelector('.theme-toggle')) {
+                const themeToggle = document.createElement('button');
+                themeToggle.className = 'theme-toggle';
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                document.body.appendChild(themeToggle);
+
+                // Check for saved theme preference
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                }
+
+                // Theme toggle functionality
+                themeToggle.addEventListener('click', function() {
+                    const currentTheme = document.documentElement.getAttribute('data-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    document.documentElement.setAttribute('data-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+                    
+                    themeToggle.innerHTML = newTheme === 'dark' ? 
+                        '<i class="fas fa-sun"></i>' : 
+                        '<i class="fas fa-moon"></i>';
+                });
+            }
         });
     </script>
+    {% block scripts %}{% endblock %}
 </body>
 </html> 
