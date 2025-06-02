@@ -45,6 +45,7 @@ class User(UserMixin):
         self.id = str(user_data['_id'])
         self.username = user_data['username']
         self.role = user_data['role']
+        self.password_hash = user_data['password_hash']
         self.created_at = user_data.get('created_at', datetime.utcnow())
 
     @staticmethod
@@ -106,20 +107,35 @@ def login():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if not username or not password:
-            flash('Please enter both username and password.', 'danger')
+        try:
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            if not username or not password:
+                flash('Please enter both username and password.', 'danger')
+                return redirect(url_for('login'))
+            
+            user = User.get_by_username(username)
+            if not user:
+                logger.warning(f"Failed login attempt for non-existent user: {username}")
+                flash('Invalid username or password.', 'danger')
+                return redirect(url_for('login'))
+            
+            if check_password_hash(user.password_hash, password):
+                login_user(user)
+                logger.info(f"User {username} logged in successfully")
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                logger.warning(f"Failed login attempt for user: {username}")
+                flash('Invalid username or password.', 'danger')
+                return redirect(url_for('login'))
+                
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            flash('An error occurred during login. Please try again.', 'danger')
             return redirect(url_for('login'))
-        
-        user = User.get_by_username(username)
-        if user and check_password_hash(user.password_hash, password):
-            login_user(user)
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        
-        flash('Invalid username or password.', 'danger')
+            
     return render_template('login.html')
 
 @app.route('/logout')
