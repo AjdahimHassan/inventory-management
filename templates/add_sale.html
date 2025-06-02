@@ -13,27 +13,36 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('add_sale') }}">
+                    <form method="POST" action="{{ url_for('add_sale') }}" id="saleForm" onsubmit="return validateForm()">
                         <div class="mb-3">
                             <label for="listing_id" class="form-label">{% if session.get('language') == 'fr' %}Article{% else %}Item{% endif %}</label>
                             <select class="form-select" id="listing_id" name="listing_id" required>
                                 <option value="">{% if session.get('language') == 'fr' %}Sélectionner un Article{% else %}Select Item{% endif %}</option>
                                 {% for listing in listings %}
-                                <option value="{{ listing.id }}" data-cost="{{ listing.cost }}">
+                                <option value="{{ listing._id }}" data-cost="{{ listing.cost }}">
                                     {{ listing.title }} ({% if session.get('language') == 'fr' %}Coût:{% else %}Cost:{% endif %} {{ "%.2f"|format(listing.cost) }} MAD)
                                 </option>
                                 {% endfor %}
                             </select>
+                            <div class="invalid-feedback" id="listingError">
+                                {% if session.get('language') == 'fr' %}Veuillez sélectionner un article{% else %}Please select an item{% endif %}
+                            </div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="sale_price" class="form-label">{% if session.get('language') == 'fr' %}Prix de Vente (MAD){% else %}Sale Price (MAD){% endif %}</label>
                             <input type="number" class="form-control" id="sale_price" name="sale_price" step="0.01" min="0" required>
+                            <div class="invalid-feedback" id="priceError">
+                                {% if session.get('language') == 'fr' %}Veuillez entrer un prix valide{% else %}Please enter a valid price{% endif %}
+                            </div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="platform" class="form-label">{% if session.get('language') == 'fr' %}Plateforme{% else %}Platform{% endif %}</label>
                             <input type="text" class="form-control" id="platform" name="platform" required>
+                            <div class="invalid-feedback" id="platformError">
+                                {% if session.get('language') == 'fr' %}Veuillez entrer une plateforme{% else %}Please enter a platform{% endif %}
+                            </div>
                         </div>
                         
                         <div class="mb-3">
@@ -76,6 +85,41 @@
 </div>
 
 <script>
+function validateForm() {
+    let isValid = true;
+    const listingSelect = document.getElementById('listing_id');
+    const salePrice = document.getElementById('sale_price');
+    const platform = document.getElementById('platform');
+    
+    // Reset previous validation states
+    listingSelect.classList.remove('is-invalid');
+    salePrice.classList.remove('is-invalid');
+    platform.classList.remove('is-invalid');
+    
+    // Validate listing selection
+    if (!listingSelect.value) {
+        listingSelect.classList.add('is-invalid');
+        document.getElementById('listingError').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate sale price
+    if (!salePrice.value || parseFloat(salePrice.value) <= 0) {
+        salePrice.classList.add('is-invalid');
+        document.getElementById('priceError').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate platform
+    if (!platform.value.trim()) {
+        platform.classList.add('is-invalid');
+        document.getElementById('platformError').style.display = 'block';
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
 document.getElementById('listing_id').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const cost = selectedOption.dataset.cost;

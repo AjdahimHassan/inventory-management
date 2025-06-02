@@ -6,6 +6,11 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
 from dotenv import load_dotenv
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -17,8 +22,15 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # MongoDB setup
-client = MongoClient(os.getenv('MONGODB_URI'))
-db = client[os.getenv('MONGODB_DB', 'inventory_db')]
+try:
+    client = MongoClient(os.getenv('MONGODB_URI'))
+    db = client[os.getenv('MONGODB_DB', 'inventory_db')]
+    # Test the connection
+    db.command('ping')
+    logger.info("Successfully connected to MongoDB!")
+except Exception as e:
+    logger.error(f"Failed to connect to MongoDB: {str(e)}")
+    raise
 
 # Collections
 users_collection = db.users
@@ -44,17 +56,25 @@ class User(UserMixin):
 
     @staticmethod
     def get(user_id):
-        user_data = users_collection.find_one({'_id': ObjectId(user_id)})
-        if user_data:
-            return User(user_data)
-        return None
+        try:
+            user_data = users_collection.find_one({'_id': ObjectId(user_id)})
+            if user_data:
+                return User(user_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user: {str(e)}")
+            return None
 
     @staticmethod
     def get_by_username(username):
-        user_data = users_collection.find_one({'username': username})
-        if user_data:
-            return User(user_data)
-        return None
+        try:
+            user_data = users_collection.find_one({'username': username})
+            if user_data:
+                return User(user_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error getting user by username: {str(e)}")
+            return None
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -90,22 +110,30 @@ def dashboard():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = User.get_by_username('admin')
-        if not user:
-            # Create admin user if none exists
-            admin_user = {
-                'username': 'admin',
-                'password_hash': generate_password_hash('admin'),
-                'role': 'admin',
-                'created_at': datetime.utcnow().isoformat()
-            }
-            users_collection.insert_one(admin_user)
-            user = User(admin_user)
-        
-        if user.check_password(request.form['password']):
-            login_user(user)
-            return redirect(url_for('dashboard'))
-        flash('Invalid username or password', 'danger')
+        try:
+            user = User.get_by_username('admin')
+            if not user:
+                # Create admin user if none exists
+                admin_user = {
+                    'username': 'admin',
+                    'password_hash': generate_password_hash('admin'),
+                    'role': 'admin',
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                users_collection.insert_one(admin_user)
+                user = User(admin_user)
+                logger.info("Created new admin user")
+            
+            if user.check_password(request.form['password']):
+                login_user(user)
+                logger.info(f"User {user.username} logged in successfully")
+                return redirect(url_for('dashboard'))
+            else:
+                logger.warning(f"Failed login attempt for user {request.form.get('username')}")
+                flash('Invalid username or password', 'danger')
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            flash('An error occurred during login', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -177,30 +205,104 @@ def sales():
 @login_required
 def add_sale():
     if request.method == 'POST':
-        listing = listings_collection.find_one({'_id': ObjectId(request.form['listing_id'])})
-        
-        if listing:
+        try:
+            # Validate required fields
+            if not request.form.get('listing_id'):
+                flash('Please select a listing.', 'danger')
+                return redirect(url_for('add_sale'))
+            
+            if not request.form.get('sale_price'):
+                flash('Please enter a sale price.', 'danger')
+                return redirect(url_for('add_sale'))
+            
+            if not request.form.get('platform'):
+                flash('Please enter a platform.', 'danger')
+                return redirect(url_for('add_sale'))
+            
+            # Validate listing exists and is active
+            try:
+                listing = listings_collection.find_one({'_id': ObjectId(request.form['listing_id'])})
+                if not listing:
+                    flash('Selected listing not found.', 'danger')
+                    return redirect(url_for('add_sale'))
+                
+                if listing.get('status') != 'active':
+                    flash('This listing is no longer active.', 'danger')
+                    return redirect(url_for('add_sale'))
+            except Exception as e:
+                logger.error(f"Error finding listing: {str(e)}")
+                flash('Invalid listing selected.', 'danger')
+                return redirect(url_for('add_sale'))
+            
+            # Validate and convert sale price
+            try:
+                sale_price = float(request.form['sale_price'])
+                if sale_price <= 0:
+                    flash('Sale price must be greater than 0.', 'danger')
+                    return redirect(url_for('add_sale'))
+            except ValueError:
+                flash('Invalid sale price format.', 'danger')
+                return redirect(url_for('add_sale'))
+            
+            # Calculate profit
+            profit = sale_price - listing['cost']
+            
+            # Create sale record
             new_sale = {
                 'listing_id': str(listing['_id']),
                 'sale_date': datetime.utcnow().isoformat(),
-                'sale_price': float(request.form['sale_price']),
-                'profit': float(request.form['sale_price']) - listing['cost'],
+                'sale_price': sale_price,
+                'profit': profit,
                 'platform': request.form['platform'],
-                'notes': request.form.get('notes', '')
+                'notes': request.form.get('notes', ''),
+                'created_by': current_user.id
             }
-            sales_collection.insert_one(new_sale)
             
-            # Update listing status
-            listings_collection.update_one(
-                {'_id': ObjectId(listing['_id'])},
-                {'$set': {'status': 'sold', 'updated_at': datetime.utcnow().isoformat()}}
-            )
+            # Update listing status and record sale in a transaction
+            try:
+                # Start a session for transaction
+                with client.start_session() as session:
+                    with session.start_transaction():
+                        # Insert sale record
+                        sales_collection.insert_one(new_sale, session=session)
+                        
+                        # Update listing status
+                        listings_collection.update_one(
+                            {'_id': ObjectId(listing['_id'])},
+                            {
+                                '$set': {
+                                    'status': 'sold',
+                                    'updated_at': datetime.utcnow().isoformat()
+                                }
+                            },
+                            session=session
+                        )
+                
+                flash('Sale recorded successfully!', 'success')
+                logger.info(f"Sale recorded for listing {listing['_id']} by user {current_user.id}")
+                return redirect(url_for('sales'))
+                
+            except Exception as e:
+                logger.error(f"Error recording sale: {str(e)}")
+                flash('Error recording sale. Please try again.', 'danger')
+                return redirect(url_for('add_sale'))
             
-            flash('Sale recorded successfully!', 'success')
-        return redirect(url_for('sales'))
+        except Exception as e:
+            logger.error(f"Unexpected error in add_sale: {str(e)}")
+            flash('An unexpected error occurred. Please try again.', 'danger')
+            return redirect(url_for('add_sale'))
     
-    listings = list(listings_collection.find({'status': 'active'}))
-    return render_template('add_sale.html', listings=listings)
+    # GET request - show form
+    try:
+        # Get only active listings
+        listings = list(listings_collection.find({'status': 'active'}))
+        if not listings:
+            flash('No active listings available.', 'warning')
+        return render_template('add_sale.html', listings=listings)
+    except Exception as e:
+        logger.error(f"Error fetching listings: {str(e)}")
+        flash('Error loading listings. Please try again.', 'danger')
+        return redirect(url_for('sales'))
 
 @app.route('/marketplaces')
 @login_required
@@ -328,6 +430,47 @@ def delete_user(user_id):
 def change_language(language):
     session['language'] = language
     return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/delete_listing/<listing_id>', methods=['POST'])
+@login_required
+def delete_listing(listing_id):
+    try:
+        # Check if listing exists
+        listing = listings_collection.find_one({'_id': ObjectId(listing_id)})
+        if not listing:
+            return jsonify({
+                'success': False,
+                'message': 'Listing not found.'
+            }), 404
+
+        # Check if listing is sold
+        if listing.get('status') == 'sold':
+            return jsonify({
+                'success': False,
+                'message': 'Cannot delete a sold listing.'
+            }), 400
+
+        # Delete the listing
+        result = listings_collection.delete_one({'_id': ObjectId(listing_id)})
+        
+        if result.deleted_count > 0:
+            logger.info(f"Listing {listing_id} deleted by user {current_user.id}")
+            return jsonify({
+                'success': True,
+                'message': 'Listing deleted successfully.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to delete listing.'
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error deleting listing: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the listing.'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 
