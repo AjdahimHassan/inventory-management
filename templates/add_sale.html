@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Enregistrer une Vente{% else %}Record Sale{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Enregistrer une nouvelle vente{% else %}Record a new sale{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_sale') }}">
+                        <div class="mb-3">
+                            <label for="listing_id" class="form-label">{% if session.get('language') == 'fr' %}Article{% else %}Item{% endif %}</label>
+                            <select class="form-select" id="listing_id" name="listing_id" required>
+                                <option value="">{% if session.get('language') == 'fr' %}Sélectionner un Article{% else %}Select Item{% endif %}</option>
+                                {% for listing in listings %}
+                                <option value="{{ listing.id }}" data-cost="{{ listing.cost }}">
+                                    {{ listing.title }} ({% if session.get('language') == 'fr' %}Coût:{% else %}Cost:{% endif %} {{ "%.2f"|format(listing.cost) }} MAD)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sale_price" class="form-label">{% if session.get('language') == 'fr' %}Prix de Vente (MAD){% else %}Sale Price (MAD){% endif %}</label>
+                            <input type="number" class="form-control" id="sale_price" name="sale_price" step="0.01" min="0" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="platform" class="form-label">{% if session.get('language') == 'fr' %}Plateforme{% else %}Platform{% endif %}</label>
+                            <input type="text" class="form-control" id="platform" name="platform" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">{% if session.get('language') == 'fr' %}Notes{% else %}Notes{% endif %}</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('sales') }}" class="btn btn-secondary">{% if session.get('language') == 'fr' %}Annuler{% else %}Cancel{% endif %}</a>
+                            <button type="submit" class="btn btn-primary">{% if session.get('language') == 'fr' %}Enregistrer la Vente{% else %}Record Sale{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{% if session.get('language') == 'fr' %}Conseils{% else %}Tips{% endif %}</h5>
+                    <ul class="list-unstyled">
+                        {% if session.get('language') == 'fr' %}
+                        <li class="mb-2">• Vérifiez le prix de vente avant d'enregistrer</li>
+                        <li class="mb-2">• Assurez-vous que l'article est en stock</li>
+                        <li class="mb-2">• Enregistrez les détails de la transaction</li>
+                        <li class="mb-2">• Vérifiez les informations du client</li>
+                        <li class="mb-2">• Gardez une trace des paiements</li>
+                        {% else %}
+                        <li class="mb-2">• Verify the sale price before recording</li>
+                        <li class="mb-2">• Ensure the item is in stock</li>
+                        <li class="mb-2">• Record transaction details</li>
+                        <li class="mb-2">• Verify customer information</li>
+                        <li class="mb-2">• Keep track of payments</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('listing_id').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const cost = selectedOption.dataset.cost;
+    if (cost) {
+        // You can add logic here to calculate profit or update other fields
+        console.log('Selected item cost:', cost);
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Ajouter une Nouvelle Annonce{% else %}Add New Listing{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Créer une nouvelle annonce de produit{% else %}Create a new product listing{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_listing') }}">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">{% if session.get('language') == 'fr' %}Titre{% else %}Title{% endif %}</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">{% if session.get('language') == 'fr' %}Description{% else %}Description{% endif %}</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">{% if session.get('language') == 'fr' %}Prix de Vente (MAD){% else %}Selling Price (MAD){% endif %}</label>
+                                    <input type="number" class="form-control" id="price" name="price" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cost" class="form-label">{% if session.get('language') == 'fr' %}Coût (MAD){% else %}Cost (MAD){% endif %}</label>
+                                    <input type="number" class="form-control" id="cost" name="cost" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="platform" class="form-label">{% if session.get('language') == 'fr' %}Plateforme{% else %}Platform{% endif %}</label>
+                                    <select class="form-select" id="platform" name="platform" required>
+                                        <option value="">{% if session.get('language') == 'fr' %}Sélectionner une Plateforme{% else %}Select Platform{% endif %}</option>
+                                        {% for marketplace in marketplaces %}
+                                        <option value="{{ marketplace.name }}">{{ marketplace.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="listing_url" class="form-label">{% if session.get('language') == 'fr' %}URL de l'Annonce{% else %}Listing URL{% endif %}</label>
+                                    <input type="url" class="form-control" id="listing_url" name="listing_url" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="seller_contact" class="form-label">{% if session.get('language') == 'fr' %}Contact du Vendeur{% else %}Seller Contact{% endif %}</label>
+                            <input type="text" class="form-control" id="seller_contact" name="seller_contact">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">{% if session.get('language') == 'fr' %}Notes{% else %}Notes{% endif %}</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">{% if session.get('language') == 'fr' %}Annuler{% else %}Cancel{% endif %}</a>
+                            <button type="submit" class="btn btn-primary">{% if session.get('language') == 'fr' %}Créer l'Annonce{% else %}Create Listing{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{% if session.get('language') == 'fr' %}Conseils{% else %}Tips{% endif %}</h5>
+                    <ul class="list-unstyled">
+                        {% if session.get('language') == 'fr' %}
+                        <li class="mb-2">• Soyez précis dans votre titre et description</li>
+                        <li class="mb-2">• Incluez tous les détails pertinents sur l'article</li>
+                        <li class="mb-2">• Fixez des prix compétitifs basés sur l'étude du marché</li>
+                        <li class="mb-2">• Ajoutez des photos claires et de haute qualité</li>
+                        <li class="mb-2">• Soyez honnête sur l'état de l'article</li>
+                        {% else %}
+                        <li class="mb-2">• Be specific in your title and description</li>
+                        <li class="mb-2">• Include all relevant details about the item</li>
+                        <li class="mb-2">• Set competitive prices based on market research</li>
+                        <li class="mb-2">• Add clear, high-quality photos</li>
+                        <li class="mb-2">• Be honest about the item's condition</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

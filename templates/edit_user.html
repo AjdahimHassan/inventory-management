@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Modifier l'Utilisateur{% else %}Edit User{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Modifier les informations de l'utilisateur{% else %}Edit user information{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('edit_user', user_id=user.id) }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">{% if session.get('language') == 'fr' %}Nom d'Utilisateur{% else %}Username{% endif %}</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">{% if session.get('language') == 'fr' %}Nouveau Mot de Passe{% else %}New Password{% endif %}</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="{% if session.get('language') == 'fr' %}Laisser vide pour ne pas changer{% else %}Leave blank to keep current{% endif %}">
+                            <small class="text-muted">{% if session.get('language') == 'fr' %}Laissez vide pour conserver le mot de passe actuel{% else %}Leave blank to keep current password{% endif %}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="role" class="form-label">{% if session.get('language') == 'fr' %}Rôle{% else %}Role{% endif %}</label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="user" {% if user.role == 'user' %}selected{% endif %}>{% if session.get('language') == 'fr' %}Utilisateur{% else %}User{% endif %}</option>
+                                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>{% if session.get('language') == 'fr' %}Administrateur{% else %}Admin{% endif %}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('users') }}" class="btn btn-secondary">{% if session.get('language') == 'fr' %}Annuler{% else %}Cancel{% endif %}</a>
+                            <button type="submit" class="btn btn-primary">{% if session.get('language') == 'fr' %}Enregistrer les Modifications{% else %}Save Changes{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{% if session.get('language') == 'fr' %}Conseils{% else %}Tips{% endif %}</h5>
+                    <ul class="list-unstyled">
+                        {% if session.get('language') == 'fr' %}
+                        <li class="mb-2">• Choisissez un nom d'utilisateur unique</li>
+                        <li class="mb-2">• Utilisez un mot de passe fort</li>
+                        <li class="mb-2">• Attribuez les rôles avec précaution</li>
+                        <li class="mb-2">• Gardez au moins un administrateur</li>
+                        <li class="mb-2">• Vérifiez les permissions avant de sauvegarder</li>
+                        {% else %}
+                        <li class="mb-2">• Choose a unique username</li>
+                        <li class="mb-2">• Use a strong password</li>
+                        <li class="mb-2">• Assign roles carefully</li>
+                        <li class="mb-2">• Keep at least one admin</li>
+                        <li class="mb-2">• Verify permissions before saving</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

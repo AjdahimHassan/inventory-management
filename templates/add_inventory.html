@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Ajouter un Article{% else %}Add Inventory Item{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Ajouter un nouvel article à l'inventaire{% else %}Add a new item to inventory{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_inventory') }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">{% if session.get('language') == 'fr' %}Nom de l'Article{% else %}Item Name{% endif %}</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quantity" class="form-label">{% if session.get('language') == 'fr' %}Quantité{% else %}Quantity{% endif %}</label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" min="0" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cost_per_unit" class="form-label">{% if session.get('language') == 'fr' %}Coût Unitaire (MAD){% else %}Cost per Unit (MAD){% endif %}</label>
+                                    <input type="number" class="form-control" id="cost_per_unit" name="cost_per_unit" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="clothing">Clothing</option>
+                                <option value="home">Home & Garden</option>
+                                <option value="sports">Sports & Outdoors</option>
+                                <option value="toys">Toys & Games</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="location" class="form-label">{% if session.get('language') == 'fr' %}Emplacement{% else %}Location{% endif %}</label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="supplier" class="form-label">Supplier</label>
+                            <input type="text" class="form-control" id="supplier" name="supplier">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">{% if session.get('language') == 'fr' %}Notes{% else %}Notes{% endif %}</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory') }}" class="btn btn-secondary">{% if session.get('language') == 'fr' %}Annuler{% else %}Cancel{% endif %}</a>
+                            <button type="submit" class="btn btn-primary">{% if session.get('language') == 'fr' %}Ajouter l'Article{% else %}Add Item{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{% if session.get('language') == 'fr' %}Conseils{% else %}Tips{% endif %}</h5>
+                    <ul class="list-unstyled">
+                        {% if session.get('language') == 'fr' %}
+                        <li class="mb-2">• Utilisez un nom clair et descriptif</li>
+                        <li class="mb-2">• Gardez une trace précise des quantités</li>
+                        <li class="mb-2">• Mettez à jour régulièrement les coûts</li>
+                        <li class="mb-2">• Organisez les articles par emplacement</li>
+                        <li class="mb-2">• Ajoutez des notes pour les détails importants</li>
+                        {% else %}
+                        <li class="mb-2">• Use a clear and descriptive name</li>
+                        <li class="mb-2">• Keep accurate track of quantities</li>
+                        <li class="mb-2">• Update costs regularly</li>
+                        <li class="mb-2">• Organize items by location</li>
+                        <li class="mb-2">• Add notes for important details</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

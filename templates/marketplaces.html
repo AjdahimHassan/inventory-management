@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Marchés{% else %}Marketplaces{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Gérer vos plateformes de vente{% else %}Manage your selling platforms{% endif %}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_marketplace') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> {% if session.get('language') == 'fr' %}Ajouter un Marché{% else %}Add Marketplace{% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% if session.get('language') == 'fr' %}Nom{% else %}Name{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}URL{% else %}URL{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Description{% else %}Description{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Date d'Ajout{% else %}Added On{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Actions{% else %}Actions{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for marketplace in marketplaces %}
+                                <tr>
+                                    <td>{{ marketplace.name }}</td>
+                                    <td><a href="{{ marketplace.url }}" target="_blank">{{ marketplace.url }}</a></td>
+                                    <td>{{ marketplace.description }}</td>
+                                    <td>{{ marketplace.created_at.split('T')[0] }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editMarketplace({{ marketplace.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMarketplace({{ marketplace.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editMarketplace(id) {
+    // Implement edit marketplace functionality
+    console.log('Edit marketplace:', id);
+}
+
+function deleteMarketplace(id) {
+    if (confirm('{% if session.get("language") == "fr" %}Êtes-vous sûr de vouloir supprimer ce marché ?{% else %}Are you sure you want to delete this marketplace?{% endif %}')) {
+        // Implement delete marketplace functionality
+        console.log('Delete marketplace:', id);
+    }
+}
+</script>
+{% endblock %} 

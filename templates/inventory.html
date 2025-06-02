@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Inventaire{% else %}Inventory{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Gérer votre inventaire de produits{% else %}Manage your product inventory{% endif %}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_inventory') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> {% if session.get('language') == 'fr' %}Ajouter un Article{% else %}Add Item{% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% if session.get('language') == 'fr' %}Nom{% else %}Name{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Quantité{% else %}Quantity{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Coût Unitaire (MAD){% else %}Cost per Unit (MAD){% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Valeur Totale (MAD){% else %}Total Value (MAD){% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Emplacement{% else %}Location{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Dernier Réapprovisionnement{% else %}Last Restock{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Actions{% else %}Actions{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if item.quantity < 5 else 'success' }}">
+                                            {{ item.quantity }}
+                                        </span>
+                                    </td>
+                                    <td>{{ "%.2f"|format(item.cost_per_unit) }}</td>
+                                    <td>{{ "%.2f"|format(item.quantity * item.cost_per_unit) }}</td>
+                                    <td>{{ item.location }}</td>
+                                    <td>{{ item.last_restock.split('T')[0] }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editItem({{ item.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteItem({{ item.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editItem(id) {
+    // Implement edit item functionality
+    console.log('Edit item:', id);
+}
+
+function deleteItem(id) {
+    if (confirm('{% if session.get("language") == "fr" %}Êtes-vous sûr de vouloir supprimer cet article ?{% else %}Are you sure you want to delete this item?{% endif %}')) {
+        // Implement delete item functionality
+        console.log('Delete item:', id);
+    }
+}
+</script>
+{% endblock %} 

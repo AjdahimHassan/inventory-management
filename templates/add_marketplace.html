@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Add Marketplace</h2>
+            <p class="text-muted">Add a new reselling platform</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('add_marketplace') }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Marketplace Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="url" class="form-label">Website URL</label>
+                            <input type="url" class="form-control" id="url" name="url" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('marketplaces') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Add Marketplace</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tips</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">• Use a clear, recognizable name</li>
+                        <li class="mb-2">• Include the full website URL</li>
+                        <li class="mb-2">• Add any relevant notes about the platform</li>
+                        <li class="mb-2">• Consider adding platform-specific details</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

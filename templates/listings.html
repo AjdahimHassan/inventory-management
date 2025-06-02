@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% if session.get('language') == 'fr' %}Annonces{% else %}Listings{% endif %}</h2>
+            <p class="text-muted">{% if session.get('language') == 'fr' %}Gérer vos annonces de produits{% else %}Manage your product listings{% endif %}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('add_listing') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> {% if session.get('language') == 'fr' %}Ajouter une Annonce{% else %}Add Listing{% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% if session.get('language') == 'fr' %}Titre{% else %}Title{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Prix (MAD){% else %}Price (MAD){% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Coût (MAD){% else %}Cost (MAD){% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Plateforme{% else %}Platform{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Statut{% else %}Status{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Date de Création{% else %}Created At{% endif %}</th>
+                                    <th>{% if session.get('language') == 'fr' %}Actions{% else %}Actions{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for listing in listings %}
+                                <tr>
+                                    <td>{{ listing.title }}</td>
+                                    <td>{{ "%.2f"|format(listing.price) }}</td>
+                                    <td>{{ "%.2f"|format(listing.cost) }}</td>
+                                    <td>{{ listing.platform }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if listing.status == 'active' else 'secondary' }}">
+                                            {% if session.get('language') == 'fr' %}
+                                                {{ 'Actif' if listing.status == 'active' else 'Vendu' }}
+                                            {% else %}
+                                                {{ listing.status|title }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ listing.created_at.split('T')[0] }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editListing({{ listing.id }})">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteListing({{ listing.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editListing(id) {
+    // Implement edit listing functionality
+    console.log('Edit listing:', id);
+}
+
+function deleteListing(id) {
+    if (confirm('{% if session.get("language") == "fr" %}Êtes-vous sûr de vouloir supprimer cette annonce ?{% else %}Are you sure you want to delete this listing?{% endif %}')) {
+        // Implement delete listing functionality
+        console.log('Delete listing:', id);
+    }
+}
+</script>
+{% endblock %} 
