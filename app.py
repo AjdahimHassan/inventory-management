@@ -8,10 +8,6 @@ import os
 from dotenv import load_dotenv
 import logging
 import re
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from flask_mail import Message, Mail
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -22,6 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -43,6 +40,7 @@ marketplaces_collection = db.marketplaces
 listings_collection = db.listings
 inventory_collection = db.inventory
 sales_collection = db.sales
+password_reset_requests_collection = db.password_reset_requests
 
 # User class
 class User(UserMixin):
@@ -711,32 +709,92 @@ def request_password_reset():
             flash('Username not found', 'danger')
             return redirect(url_for('login'))
             
-        # Create email content
-        email_content = f"""
-        Password Reset Request
+        # Create reset request record
+        reset_request = {
+            'username': username,
+            'message': message,
+            'status': 'pending',
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        }
         
-        Username: {username}
-        Message: {message}
-        
-        Please review this request and take appropriate action.
-        """
-        
-        # Send email
-        msg = Message(
-            'Password Reset Request',
-            sender=app.config['MAIL_DEFAULT_SENDER'],
-            recipients=[app.config['MAIL_DEFAULT_SENDER']],
-            body=email_content
-        )
-        
-        mail.send(msg)
-        flash('Password reset request has been sent to the administrator', 'success')
+        password_reset_requests_collection.insert_one(reset_request)
+        flash('Password reset request has been submitted. An administrator will review your request.', 'success')
         
     except Exception as e:
-        app.logger.error(f"Error sending password reset email: {str(e)}")
+        app.logger.error(f"Error creating password reset request: {str(e)}")
         flash('An error occurred while processing your request', 'danger')
         
     return redirect(url_for('login'))
+
+@app.route('/password_reset_requests')
+@login_required
+def password_reset_requests():
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    requests = list(password_reset_requests_collection.find().sort('created_at', -1))
+    return render_template('password_reset_requests.html', requests=requests)
+
+@app.route('/handle_reset_request/<request_id>', methods=['POST'])
+@login_required
+def handle_reset_request(request_id):
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        action = request.form.get('action')
+        new_password = request.form.get('new_password')
+        
+        reset_request = password_reset_requests_collection.find_one({'_id': ObjectId(request_id)})
+        if not reset_request:
+            flash('Reset request not found', 'danger')
+            return redirect(url_for('password_reset_requests'))
+        
+        if action == 'approve' and new_password:
+            # Update user's password
+            users_collection.update_one(
+                {'username': reset_request['username']},
+                {'$set': {'password_hash': generate_password_hash(new_password)}}
+            )
+            
+            # Update request status
+            password_reset_requests_collection.update_one(
+                {'_id': ObjectId(request_id)},
+                {
+                    '$set': {
+                        'status': 'approved',
+                        'updated_at': datetime.utcnow(),
+                        'handled_by': current_user.id
+                    }
+                }
+            )
+            flash('Password reset request approved', 'success')
+            
+        elif action == 'reject':
+            # Update request status
+            password_reset_requests_collection.update_one(
+                {'_id': ObjectId(request_id)},
+                {
+                    '$set': {
+                        'status': 'rejected',
+                        'updated_at': datetime.utcnow(),
+                        'handled_by': current_user.id
+                    }
+                }
+            )
+            flash('Password reset request rejected', 'success')
+            
+        else:
+            flash('Invalid action or missing new password', 'danger')
+            
+    except Exception as e:
+        app.logger.error(f"Error handling reset request: {str(e)}")
+        flash('An error occurred while processing the request', 'danger')
+        
+    return redirect(url_for('password_reset_requests'))
 
 @app.route('/reports')
 @login_required
