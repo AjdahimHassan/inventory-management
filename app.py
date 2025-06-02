@@ -512,10 +512,17 @@ def delete_user(user_id):
     return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 @app.route('/change_language/<language>')
-@login_required
 def change_language(language):
-    session['language'] = language
+    if language in ['en', 'fr']:
+        session['language'] = language
     return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/change_theme', methods=['POST'])
+def change_theme():
+    data = request.get_json()
+    if data and 'theme' in data and data['theme'] in ['light', 'dark']:
+        session['theme'] = data['theme']
+    return jsonify({'success': True})
 
 @app.route('/delete_listing/<listing_id>', methods=['POST'])
 @login_required
