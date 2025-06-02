@@ -15,9 +15,9 @@
             --input-bg: #ffffff;
             --input-border: #e9ecef;
             --shadow-color: rgba(0, 0, 0, 0.1);
-            --nav-bg: #ffffff;
-            --nav-text: #333;
-            --nav-hover: #f8f9fa;
+            --nav-bg: #212529;
+            --nav-text: #ffffff;
+            --nav-hover: rgba(255, 255, 255, 0.1);
             --table-bg: #ffffff;
             --table-border: #dee2e6;
             --table-hover: #f8f9fa;
@@ -31,9 +31,9 @@
             --input-bg: #3d3d3d;
             --input-border: #4d4d4d;
             --shadow-color: rgba(0, 0, 0, 0.3);
-            --nav-bg: #2d2d2d;
+            --nav-bg: #1a1a1a;
             --nav-text: #e0e0e0;
-            --nav-hover: #3d3d3d;
+            --nav-hover: rgba(255, 255, 255, 0.1);
             --table-bg: #2d2d2d;
             --table-border: #4d4d4d;
             --table-hover: #3d3d3d;
@@ -45,17 +45,64 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        .navbar {
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
             background-color: var(--nav-bg);
-            border-bottom: 1px solid var(--input-border);
+            color: var(--nav-text);
+            width: 250px;
+            transition: all 0.3s;
         }
 
-        .navbar-brand, .nav-link {
-            color: var(--nav-text) !important;
+        .sidebar.collapsed {
+            margin-left: -250px;
         }
 
-        .nav-link:hover {
+        .sidebar .nav-link {
+            color: var(--nav-text);
+            padding: 0.5rem 1rem;
+            margin: 0.2rem 0;
+        }
+
+        .sidebar .nav-link:hover {
+            color: var(--nav-text);
             background-color: var(--nav-hover);
+        }
+
+        .sidebar .nav-link.active {
+            color: var(--nav-text);
+            background-color: var(--nav-hover);
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 10px;
+            left: 260px;
+            z-index: 101;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn.collapsed {
+            left: 10px;
         }
 
         .card {
@@ -151,83 +198,104 @@
             background-color: rgba(23, 162, 184, 0.1);
             border-color: rgba(23, 162, 184, 0.2);
         }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .sidebar.show {
+                margin-left: 0;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .toggle-btn {
+                left: 10px;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     {% if current_user.is_authenticated %}
-    <nav class="navbar navbar-expand-lg navbar-light">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-                <i class="fas fa-chart-line me-2"></i>Admin Dashboard
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">
-                            <i class="fas fa-home me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('listings') }}">
-                            <i class="fas fa-list me-1"></i>Listings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('inventory') }}">
-                            <i class="fas fa-box me-1"></i>Inventory
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('sales') }}">
-                            <i class="fas fa-shopping-cart me-1"></i>Sales
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('marketplaces') }}">
-                            <i class="fas fa-store me-1"></i>Marketplaces
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('reports') }}">
-                            <i class="fas fa-chart-bar me-1"></i>Reports
-                        </a>
-                    </li>
-                    {% if current_user.role == 'admin' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('users') }}">
-                            <i class="fas fa-users me-1"></i>Users
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                <div class="d-flex align-items-center">
-                    <div class="dropdown">
-                        <button class="btn btn-link nav-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>{{ current_user.username }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('logout') }}">
-                                    <i class="fas fa-sign-out-alt me-1"></i>Logout
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+    <button class="btn btn-dark toggle-btn" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="position-sticky">
+            <div class="px-3 mb-4">
+                <h5>Admin Dashboard</h5>
             </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-home"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('listings') }}">
+                        <i class="fas fa-list"></i>Listings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory') }}">
+                        <i class="fas fa-box"></i>Inventory
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('sales') }}">
+                        <i class="fas fa-shopping-cart"></i>Sales
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('marketplaces') }}">
+                        <i class="fas fa-store"></i>Marketplaces
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('reports') }}">
+                        <i class="fas fa-chart-bar"></i>Reports
+                    </a>
+                </li>
+                {% if current_user.role == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('users') }}">
+                        <i class="fas fa-users"></i>Users
+                    </a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt"></i>Logout
+                    </a>
+                </li>
+            </ul>
         </div>
     </nav>
+
+    <main class="main-content" id="mainContent">
     {% endif %}
 
     {% block content %}{% endblock %}
 
+    {% if current_user.is_authenticated %}
+    </main>
+    {% endif %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    document.getElementById('sidebar').classList.toggle('collapsed');
+                    document.getElementById('mainContent').classList.toggle('expanded');
+                    this.classList.toggle('collapsed');
+                });
+            }
+
             // Add theme toggle button if not on login page
             if (!document.querySelector('.theme-toggle')) {
                 const themeToggle = document.createElement('button');

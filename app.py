@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
@@ -11,6 +11,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from flask_mail import Message, Mail
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -107,6 +108,9 @@ def dashboard():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Clear any existing session
+    session.clear()
+    
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -126,7 +130,14 @@ def login():
                 return redirect(url_for('login'))
             
             if check_password_hash(user.password_hash, password):
+                # Clear any existing session
+                session.clear()
+                # Create new session
                 login_user(user)
+                # Set session expiry
+                session.permanent = True
+                app.permanent_session_lifetime = timedelta(days=1)
+                
                 logger.info(f"User {username} logged in successfully")
                 flash('Login successful!', 'success')
                 return redirect(url_for('dashboard'))
@@ -394,48 +405,39 @@ def get_user(user_id):
 @login_required
 def add_user():
     if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'danger')
+        flash('You do not have permission to add users', 'danger')
         return redirect(url_for('users'))
-    
+        
     try:
         username = request.form.get('username')
         password = request.form.get('password')
         role = request.form.get('role', 'user')
         
         if not username or not password:
-            flash('Username and password are required.', 'danger')
+            flash('Username and password are required', 'danger')
             return redirect(url_for('users'))
-        
-        # Validate username format
-        if not re.match(r'^[a-zA-Z0-9_-]{3,20}$', username):
-            flash('Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens.', 'danger')
-            return redirect(url_for('users'))
-        
-        # Validate password strength
-        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$', password):
-            flash('Password must be at least 8 characters long and include letters, numbers, and special characters.', 'danger')
-            return redirect(url_for('users'))
-        
+            
+        # Check if username already exists
         if users_collection.find_one({'username': username}):
-            flash('Username already exists.', 'danger')
+            flash('Username already exists', 'danger')
             return redirect(url_for('users'))
-        
-        hashed_password = generate_password_hash(password)
-        user = {
+            
+        # Create new user
+        user_data = {
             'username': username,
-            'password_hash': hashed_password,
+            'password_hash': generate_password_hash(password),
             'role': role,
             'created_at': datetime.utcnow()
         }
         
-        users_collection.insert_one(user)
-        logger.info(f"New user created: {username} with role {role}")
-        flash('User added successfully.', 'success')
-        return redirect(url_for('users'))
+        users_collection.insert_one(user_data)
+        flash('User added successfully', 'success')
+        
     except Exception as e:
-        logger.error(f"Error adding user: {str(e)}")
-        flash('An error occurred while adding the user.', 'danger')
-        return redirect(url_for('users'))
+        app.logger.error(f"Error adding user: {str(e)}")
+        flash('An error occurred while adding the user', 'danger')
+        
+    return redirect(url_for('users'))
 
 @app.route('/edit_user/<user_id>', methods=['POST'])
 @login_required
@@ -698,67 +700,43 @@ def delete_sale(sale_id):
 def request_password_reset():
     try:
         username = request.form.get('username')
-        message = request.form.get('message')
+        message = request.form.get('message', '')
         
-        if not username or not message:
-            flash('Please provide both username and message.', 'danger')
+        if not username:
+            flash('Please provide a username', 'danger')
             return redirect(url_for('login'))
-        
-        # Check if user exists
-        user = User.get_by_username(username)
+            
+        user = users_collection.find_one({'username': username})
         if not user:
-            flash('Username not found.', 'danger')
+            flash('Username not found', 'danger')
             return redirect(url_for('login'))
-        
-        # Send email to admin
-        admin_email = "ressel.maroc.auttomate@gmail.com"
-        subject = f"Password Reset Request - {username}"
-        
+            
+        # Create email content
         email_content = f"""
         Password Reset Request
         
         Username: {username}
-        User ID: {user.id}
-        Role: {user.role}
-        
-        Message from user:
-        {message}
+        Message: {message}
         
         Please review this request and take appropriate action.
         """
         
-        msg = MIMEMultipart()
-        msg['From'] = os.getenv('SMTP_USERNAME', 'your-email@example.com')
-        msg['To'] = admin_email
-        msg['Subject'] = subject
+        # Send email
+        msg = Message(
+            'Password Reset Request',
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[app.config['MAIL_DEFAULT_SENDER']],
+            body=email_content
+        )
         
-        msg.attach(MIMEText(email_content, 'plain'))
-        
-        try:
-            # Configure SMTP settings
-            smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-            smtp_port = int(os.getenv('SMTP_PORT', 587))
-            smtp_username = os.getenv('SMTP_USERNAME')
-            smtp_password = os.getenv('SMTP_PASSWORD')
-            
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-            server.login(smtp_username, smtp_password)
-            server.send_message(msg)
-            server.quit()
-            
-            logger.info(f"Password reset request sent for user: {username}")
-            flash('Your password reset request has been sent to the administrator.', 'success')
-        except Exception as e:
-            logger.error(f"Error sending password reset email: {str(e)}")
-            flash('Error sending password reset request. Please try again later.', 'danger')
-        
-        return redirect(url_for('login'))
+        mail.send(msg)
+        flash('Password reset request has been sent to the administrator', 'success')
         
     except Exception as e:
-        logger.error(f"Error processing password reset request: {str(e)}")
-        flash('An error occurred. Please try again later.', 'danger')
-        return redirect(url_for('login'))
+        app.logger.error(f"Error sending password reset email: {str(e)}")
+        flash('An error occurred while processing your request', 'danger')
+        
+    return redirect(url_for('login'))
 
 @app.route('/reports')
 @login_required
