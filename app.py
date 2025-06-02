@@ -44,15 +44,8 @@ class User(UserMixin):
     def __init__(self, user_data):
         self.id = str(user_data['_id'])
         self.username = user_data['username']
-        self.password_hash = user_data['password_hash']
-        self.role = user_data.get('role', 'user')
-        self.created_at = user_data.get('created_at', datetime.utcnow().isoformat())
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        self.role = user_data['role']
+        self.created_at = user_data.get('created_at', datetime.utcnow())
 
     @staticmethod
     def get(user_id):
@@ -62,7 +55,7 @@ class User(UserMixin):
                 return User(user_data)
             return None
         except Exception as e:
-            logger.error(f"Error getting user: {str(e)}")
+            logging.error(f"Error getting user: {str(e)}")
             return None
 
     @staticmethod
@@ -73,7 +66,7 @@ class User(UserMixin):
                 return User(user_data)
             return None
         except Exception as e:
-            logger.error(f"Error getting user by username: {str(e)}")
+            logging.error(f"Error getting user by username: {str(e)}")
             return None
 
 @login_manager.user_loader
@@ -109,37 +102,31 @@ def dashboard():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
-        try:
-            user = User.get_by_username('admin')
-            if not user:
-                # Create admin user if none exists
-                admin_user = {
-                    'username': 'admin',
-                    'password_hash': generate_password_hash('admin'),
-                    'role': 'admin',
-                    'created_at': datetime.utcnow().isoformat()
-                }
-                users_collection.insert_one(admin_user)
-                user = User(admin_user)
-                logger.info("Created new admin user")
-            
-            if user.check_password(request.form['password']):
-                login_user(user)
-                logger.info(f"User {user.username} logged in successfully")
-                return redirect(url_for('dashboard'))
-            else:
-                logger.warning(f"Failed login attempt for user {request.form.get('username')}")
-                flash('Invalid username or password', 'danger')
-        except Exception as e:
-            logger.error(f"Login error: {str(e)}")
-            flash('An error occurred during login', 'danger')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Please enter both username and password.', 'danger')
+            return redirect(url_for('login'))
+        
+        user = User.get_by_username(username)
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))
+        
+        flash('Invalid username or password.', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
 @app.route('/listings')
@@ -331,99 +318,113 @@ def users():
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'danger')
         return redirect(url_for('dashboard'))
+    
     users = list(users_collection.find())
     return render_template('users.html', users=users)
 
-@app.route('/add_user', methods=['GET', 'POST'])
+@app.route('/get_user/<user_id>')
+@login_required
+def get_user(user_id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    if user:
+        user['_id'] = str(user['_id'])
+        return jsonify(user)
+    return jsonify({'error': 'User not found'}), 404
+
+@app.route('/add_user', methods=['POST'])
 @login_required
 def add_user():
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'danger')
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        if users_collection.find_one({'username': request.form['username']}):
-            flash('Username already exists.', 'danger')
-            return redirect(url_for('add_user'))
-        
-        new_user = {
-            'username': request.form['username'],
-            'password_hash': generate_password_hash(request.form['password']),
-            'role': request.form['role'],
-            'created_at': datetime.utcnow().isoformat()
-        }
-        users_collection.insert_one(new_user)
-        flash('User created successfully!', 'success')
         return redirect(url_for('users'))
     
-    return render_template('add_user.html')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'user')
+    
+    if not username or not password:
+        flash('Username and password are required.', 'danger')
+        return redirect(url_for('users'))
+    
+    if users_collection.find_one({'username': username}):
+        flash('Username already exists.', 'danger')
+        return redirect(url_for('users'))
+    
+    hashed_password = generate_password_hash(password)
+    user = {
+        'username': username,
+        'password_hash': hashed_password,
+        'role': role,
+        'created_at': datetime.utcnow()
+    }
+    
+    users_collection.insert_one(user)
+    flash('User added successfully.', 'success')
+    return redirect(url_for('users'))
 
-@app.route('/edit_user/<user_id>', methods=['GET', 'POST'])
+@app.route('/edit_user/<user_id>', methods=['POST'])
 @login_required
 def edit_user(user_id):
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'danger')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('users'))
     
     user = users_collection.find_one({'_id': ObjectId(user_id)})
-    
     if not user:
         flash('User not found.', 'danger')
         return redirect(url_for('users'))
     
-    if request.method == 'POST':
-        # Don't allow editing the last admin
-        if user['role'] == 'admin' and str(user['_id']) == current_user.id and request.form['role'] != 'admin':
-            admin_count = users_collection.count_documents({'role': 'admin'})
-            if admin_count <= 1:
-                flash('Cannot remove admin privileges from the last admin.', 'danger')
-                return redirect(url_for('edit_user', user_id=user_id))
-        
-        # Update user data
-        update_data = {
-            'username': request.form['username'],
-            'role': request.form['role']
-        }
-        if request.form.get('password'):  # Only update password if provided
-            update_data['password_hash'] = generate_password_hash(request.form['password'])
-        
-        users_collection.update_one(
-            {'_id': ObjectId(user_id)},
-            {'$set': update_data}
-        )
-        flash('User updated successfully!', 'success')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role')
+    
+    if not username:
+        flash('Username is required.', 'danger')
         return redirect(url_for('users'))
     
-    return render_template('edit_user.html', user=user)
+    # Check if username is taken by another user
+    existing_user = users_collection.find_one({
+        'username': username,
+        '_id': {'$ne': ObjectId(user_id)}
+    })
+    if existing_user:
+        flash('Username already exists.', 'danger')
+        return redirect(url_for('users'))
+    
+    update_data = {
+        'username': username,
+        'role': role
+    }
+    
+    if password:
+        update_data['password_hash'] = generate_password_hash(password)
+    
+    users_collection.update_one(
+        {'_id': ObjectId(user_id)},
+        {'$set': update_data}
+    )
+    
+    flash('User updated successfully.', 'success')
+    return redirect(url_for('users'))
 
 @app.route('/delete_user/<user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
     if current_user.role != 'admin':
-        flash('Access denied. Admin privileges required.', 'danger')
-        return redirect(url_for('dashboard'))
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
     
     user = users_collection.find_one({'_id': ObjectId(user_id)})
-    
     if not user:
-        flash('User not found.', 'danger')
-        return redirect(url_for('users'))
+        return jsonify({'success': False, 'message': 'User not found'}), 404
     
-    # Don't allow deleting the last admin
-    if user['role'] == 'admin':
-        admin_count = users_collection.count_documents({'role': 'admin'})
-        if admin_count <= 1:
-            flash('Cannot delete the last admin user.', 'danger')
-            return redirect(url_for('users'))
-    
-    # Don't allow users to delete themselves
-    if str(user['_id']) == current_user.id:
-        flash('Cannot delete your own account.', 'danger')
-        return redirect(url_for('users'))
+    if user['username'] == 'admin':
+        return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
     
     users_collection.delete_one({'_id': ObjectId(user_id)})
-    flash('User deleted successfully!', 'success')
-    return redirect(url_for('users'))
+    return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 @app.route('/change_language/<language>')
 @login_required
