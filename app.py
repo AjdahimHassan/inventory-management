@@ -79,6 +79,12 @@ def load_user(user_id):
 
 # Routes
 @app.route('/')
+def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
+
+@app.route('/dashboard')
 @login_required
 def dashboard():
     listings = list(listings_collection.find())
@@ -478,10 +484,6 @@ def edit_user(user_id):
         }
         
         if password:
-            # Validate password strength
-            if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$', password):
-                flash('Password must be at least 8 characters long and include letters, numbers, and special characters.', 'danger')
-                return redirect(url_for('users'))
             update_data['password_hash'] = generate_password_hash(password)
         
         users_collection.update_one(
